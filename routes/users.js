@@ -2,33 +2,30 @@ var express = require('express');
 var router = express.Router();
 const db = require('../db/index');
 const { v4: uuidv4 } = require('uuid');
-const {isValidPassword} = require("../helpers/auth");
+const { isValidPassword } = require("../helpers/auth");
+const {authMiddleware} = require("../middlewares/auth");
 
-let authMiddleware = (req, res, next) => {
-    db('users_tokens').where({
-        'token': req.headers?.authorization || '',
-    }).then((results) => {
-        if (results.length === 0) {
-            res.status(401).json({
-                message: "Unauthorized"
-            });
-        } else {
-            next();
-        }
-    })
-};
-
-/* GET users listing. */
 router.get('/', authMiddleware, function(req, res, next) {
-  // db('users').insert({
-  //   login: 'test',
-  //   password: 'test',
-  // });
-
   db('users').then((users) => {
     res.json({
       users,
+      status: 200,
     })
+  })
+});
+
+router.get('/user-info', authMiddleware, function(req, res, next) {
+  db('users_tokens').where({ token: req.headers?.authorization || '' }).first().then((userWithToken) => {
+    if (userWithToken) {
+      db('users').where({id: userWithToken.user_id}).first().then((user) => {
+        if (user) {
+          res.json({
+            user,
+            status: 200,
+          });
+        }
+      });
+    }
   })
 });
 
@@ -38,9 +35,12 @@ router.post('/register', function(req, res, next) {
 
   db('users').where({ login: userData.login }).first().then((user) => {
     if (user) {
-      res.json({
-        message: 'User with this login already registered'
+      res.status(422).json({
+        message: 'User with this login already registered',
+        status: 422,
       });
+
+      return;
     }
 
     db('users').insert({
@@ -48,7 +48,8 @@ router.post('/register', function(req, res, next) {
       password: userData.password,
     }).then(() => {
       res.json({
-        message: "Successfully"
+        message: "Successfully",
+        status: 200,
       });
     });
   })
@@ -61,7 +62,8 @@ router.post('/login', (req, res) => {
 
     if (!user) {
       res.status(422).json({
-        msg: 'Not found user with this login'
+        message: 'Not found user with this login',
+        status: 422,
       });
 
       return;
@@ -79,13 +81,15 @@ router.post('/login', (req, res) => {
         }).then(() => {
           res.json({
             message: "Successfully",
+            status: 200,
             token: newToken,
           })
         })
       });
     } else {
       res.status(422).json({
-        msg: 'Incorrect password'
+        message: 'Incorrect password',
+        status: 422,
       })
     }
   })
