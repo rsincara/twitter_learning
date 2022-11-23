@@ -20,7 +20,8 @@ router.post('/', authMiddleware, function(req, res, next) {
         if (user) {
             db('twits').insert({
                 post: req.body.text,
-                author_id: user.id
+                author_id: user.id,
+                created_date: new Date(),
             }).returning('id').then(([result]) => {
                 res.json({
                     message: 'success',

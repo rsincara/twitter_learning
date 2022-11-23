@@ -2,7 +2,6 @@ var express = require('express');
 var path = require('path');
 var cookieParser = require('cookie-parser');
 var logger = require('morgan');
-var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 var twitsRouter = require('./routes/twits');
 var cors = require('cors')
@@ -28,7 +27,12 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
+// adding header for check nginx server name
+app.use(function (req, res, next) {
+    res.append('Server_name', process.env.name);
+    next();
+})
+
 app.use('/users', usersRouter);
 app.use('/twits', twitsRouter);
 
